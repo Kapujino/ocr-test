@@ -13,6 +13,9 @@ from PIL import Image
 """
 implement logging
 
+maybe antialiase the image
+https://stackoverflow.com/questions/28935983/preprocessing-image-for-tesseract-ocr-with-opencv
+
 testing:
 	name jpg correctly
 	create function to compare results to file
@@ -32,25 +35,29 @@ https://github.com/tesseract-ocr/tesseract/blob/0768e4ff4c21aaf0b9beb297e6bb79ad
 
 """
 
-def transform_image(image):
-    if not os.path.exists(image):
+def transform_image(full_path, dest_path, image):
+    if not os.path.exists(full_path):
         print("the file doesnt exist")
         return
-    cmd = f"convert {image} -density 300 -colorspace gray -alpha off -crop +0+20 -bordercolor White -border 10x10 -morphology Dilate FreiChen {image}_transform.jpg"
+    destination = dest_path + image + "_transform.jpg"
+    cmd = f"convert {full_path} -density 300 -colorspace gray -alpha off -crop +0+20 -bordercolor White -border 10x10 -morphology Dilate FreiChen {destination}"
     try:
         subprocess.run(cmd, shell=True, check=True)
     except subprocess.CalledProcessError as e:
         print(f"ERROR from executed shell command: {e}")
+    return destination
 
-def bw_image(image):
-    if not os.path.exists(image):
+def bw_image(image_transform, dest_path, image):
+    if not os.path.exists(image_transform):
         print("the file doesnt exist")
         return
-    cmd = f"convert {image} -threshold 60% {image}_bw.jpg"
+    destination = dest_path + image + "_bw.jpg"
+    cmd = f"convert {image_transform} -threshold 60% {destination}"
     try:
         subprocess.run(cmd, shell=True, check=True)
     except subprocess.CalledProcessError as e:
         print(f"ERROR from executed shell command: {e}")
+    return destination
 
     
 def ocr_image(image_transform, set_psm):
@@ -76,7 +83,7 @@ def ocr_image(image_transform, set_psm):
         result = remove_line_breaks(api.GetUTF8Text())
         print_final_result(result)
         # compare result
-        compare_result("heart break", result)
+#        compare_result("heart break", result)
 #        print(api.AllWordConfidences())
 
 
@@ -105,11 +112,28 @@ def denoise_image(input_image):
 # Get the home directory path
 home_path = os.path.expanduser("~")
 
+"""
 image = home_path + "/captcha/solver/sample.jpg"
 image_transform = image + "_transform.jpg"
 image_final = image_transform + "_final.jpg"
 image_bw = image_transform + "_bw.jpg"
+"""
 
+example_path = home_path + "/captcha/examples/"
+dest_path = example_path + "processing/"
+
+for image in os.listdir(example_path):
+    if image.lower().endswith(('.jpg')):
+        print(image)
+        full_path = example_path + image
+        #transform images
+        image_transform = transform_image(full_path, dest_path, image)
+        image_bw = bw_image(image_transform, dest_path, image)
+
+        ocr_image(image_bw, PSM.SINGLE_BLOCK)
+
+
+"""
 #start
 transform_image(image)
 bw_image(image_transform)
@@ -139,7 +163,7 @@ for psm_type in [PSM.OSD_ONLY, PSM.AUTO_OSD, PSM.AUTO_ONLY, PSM.AUTO, PSM.SINGLE
 
 #print("PSM_OSD_ONLY,")
 #ocr_image(image_transform, PSM.OSD_ONLY)
-
+"""
 
 
 """
